@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- The viewport meta tag is crucial for mobile responsiveness, ensuring the page scales correctly on different devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D'GRUB Menu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .menu-category-title {
+            color: #d90f23; /* A bold red for titles */
+            font-size: 2.25rem;
+            font-weight: 700;
+            border-bottom: 3px solid #006400; /* Dark green underline */
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .item-name {
+            font-weight: 600;
+            color: #1a202c; /* A dark gray for readability */
+        }
+        .item-price {
+            font-weight: 700;
+            color: #006400; /* Dark green for prices */
+        }
+        .action-button {
+            /* General button styling, now with stronger shadows and accessibility focus rings */
+            @apply px-4 py-2 rounded-full font-medium text-sm transition-transform transform hover:scale-105 shadow-lg
+                   focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .description-button {
+            /* Specific styling for the Description button with a white background and red text/border */
+            @apply bg-white text-red-600 border border-red-600;
+        }
+        .pairing-button {
+            /* Specific styling for the Pairing button with a red gradient */
+            @apply bg-gradient-to-r from-green-600 to-green-700 text-white;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-white">
+
+    <!-- Main container for the menu, centered on the page -->
+    <div class="main-container bg-white p-6 md:p-12 shadow-2xl rounded-lg my-8 md:my-12">
+
+       <!-- Header section with the logo -->
+        <header class="text-center mb-10">
+            <!-- Actual D'GRUB logo image -->
+            <img src="Logo_D_grub__1_-removebg-preview.jpg" alt="D'GRUB Logo" class="mx-auto w-48 h-48 rounded-full border-4 border-green-600 shadow-lg">
+            
+            <h1 class="text-4xl md:text-5xl font-extrabold mt-6 text-red-600">D'GRUB</h1>
+            <p class="text-xl font-extrabold mt-2 text-green-600 italic">Fresh, Flavorful, Fantastic!</p>
+        </header>
+
+
+        <!-- Dynamic menu content section -->
+        <main id="menu-content" class="space-y-12"></main>
+
+    </div>
+
+    <!-- The Modal for AI responses -->
+    <div id="apiResponseModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modal-title" class="text-2xl font-bold mb-4"></div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data parsed from the new CSV file, without "Half Price" options.
+        const menuData = [
+            { "Name": "Chilli Delight Bowl", "Subgroup": "Bowl Meal", "Price": 265 },
+            { "Name": "Korean Spicy Bowl (spicy)", "Subgroup": "Bowl Meal", "Price": 265 },
+            { "Name": "Manchurian Bowl", "Subgroup": "Bowl Meal", "Price": 265 },
+            { "Name": "Schezwan Delight Bowl", "Subgroup": "Bowl Meal", "Price": 265 },
+            
+            { "Name": "Hong Kong Soup", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Mushroom Soup", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Veg Clear Soup", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Veg Hot And Sour", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Veg Lemon Coriander Soup", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Veg Manchow Soup", "Subgroup": "Soups", "Price": 175 },
+            { "Name": "Veg Sweet Corn", "Subgroup": "Soups", "Price": 175 },
+
+            { "Name": "Mix Veg Bao", "Subgroup": "Dimsum's And Bao's", "Price": 599 },
+            { "Name": "Teriyaki Mushroom Bao", "Subgroup": "Dimsum's And Bao's", "Price": 599 },
+            { "Name": "Truffle Edamame Dimsum", "Subgroup": "Dimsum's And Bao's", "Price": 699 },
+            { "Name": "Water Chestnut And Corn Dimsum", "Subgroup": "Dimsum's And Bao's", "Price": 599 },
+            { "Name": "Wild Mushroom Dimsum", "Subgroup": "Dimsum's And Bao's", "Price": 599 },
+
+            { "Name": "Mix Veg Momos", "Subgroup": "Momos  fry ", "Price": 225 },
+            { "Name": "Veg Peri Peri Momos", "Subgroup": "Momos  fry ", "Price": 245 },
+            { "Name": "Veg Cheese Momos", "Subgroup": "Momos  fry ", "Price": 255 },
+            { "Name": "Paneer Momos", "Subgroup": "Momos  fry ", "Price": 255 },
+            { "Name": "Paneer Peri Peri Momos", "Subgroup": "Momos  fry ", "Price": 275 },
+            { "Name": "Paneer Cheese Momos", "Subgroup": "Momos  fry ", "Price": 275 },
+            { "Name": "Corn And Cheese", "Subgroup": "Momos  fry ", "Price": 279 },
+
+            { "Name": "Mix Veg Momos", "Subgroup": "Momos  steam ", "Price": 225 },
+            { "Name": "Veg Peri Peri Momos", "Subgroup": "Momos  steam ", "Price": 245 },
+            { "Name": "Veg Cheese Momos", "Subgroup": "Momos  steam ", "Price": 255 },
+            { "Name": "Paneer Momos", "Subgroup": "Momos  steam ", "Price": 255 },
+            { "Name": "Paneer Peri Peri Momos", "Subgroup": "Momos  steam ", "Price": 275 },
+            { "Name": "Paneer Cheese Momos", "Subgroup": "Momos  steam ", "Price": 275 },
+            { "Name": "Corn And Cheese Momos", "Subgroup": "Momos  steam ", "Price": 279 },
+            
+            { "Name": "Gobi Manchurian", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Gobi Schezwan Dry", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Paneer Chilli", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Crispy", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Hot Garlic", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Kung Pao", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Manchurian", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Schezwan Dry", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Potato Chilli", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Veg Crispy", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Veg Manchurian", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Brocolli Babycorn Mushroom", "Subgroup": "Starters", "Price": 309 },
+            { "Name": "Gobi chilli", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Honey Chilli Potato", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Kung Pao Potato", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Mushroom Chilli", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Mushroom Manchurian", "Subgroup": "Starters", "Price": 299 },
+            { "Name": "Paneer Momo in Hot Garlic Sauce", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Momo in Kung Pao Sauce", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Paneer Momo in Schezwan Sauce", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Veg Momo in Hot Garlic Sauce", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Veg Momo in Kung Pao Sauce", "Subgroup": "Starters", "Price": 329 },
+            { "Name": "Veg Momo in Schezwan Sauce", "Subgroup": "Starters", "Price": 329 },
+
+            { "Name": "White Sauce Pasta", "Subgroup": "Pasta", "Price": 349 },
+            { "Name": "Red Sauce Pasta", "Subgroup": "Pasta", "Price": 349 },
+            { "Name": "Pink Sauce Pasta", "Subgroup": "Pasta", "Price": 349 },
+
+            { "Name": "Pizza Puff", "Subgroup": "Sides", "Price": 135 },
+
+            { "Name": "Veg Fried Rice", "Subgroup": "Rice", "Price": 299 },
+            { "Name": "Paneer Fried Rice", "Subgroup": "Rice", "Price": 329 },
+            { "Name": "Veg Schezwan Fried Rice", "Subgroup": "Rice", "Price": 299 },
+            { "Name": "Veg Paneer Schezwan Fried Rice", "Subgroup": "Rice", "Price": 329 },
+            { "Name": "Burnt Garlic Fried Rice", "Subgroup": "Rice", "Price": 299 },
+            { "Name": "Hong Kong Rice", "Subgroup": "Rice", "Price": 299 },
+            { "Name": "Hot Basil Rice", "Subgroup": "Rice", "Price": 299 },
+            { "Name": "Singapore Rice (SPICY)", "Subgroup": "Rice", "Price": 299 },
+
+            { "Name": "Veg Hakka Noodles", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Veg Schezwan Noodles", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Veg Paneer Noodles", "Subgroup": "Noodles", "Price": 329 },
+            { "Name": "Burnt Garlic Noodles", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Chowmein", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Teriyaki Noodles", "Subgroup": "Noodles", "Price": 329 },
+            { "Name": "Veg Schezwan Noodle", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Hong Kong Noodles", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Singapore Noodles (Spicy)", "Subgroup": "Noodles", "Price": 299 },
+            { "Name": "Korean Noodles", "Subgroup": "Noodles", "Price": 329 },
+            { "Name": "Veg American Chop Suey ", "Subgroup": "Noodles", "Price": 329 },
+            { "Name": "Veg Chinese Chop Suey ", "Subgroup": "Noodles", "Price": 329 },
+
+            { "Name": "Mushroom Chilli Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Mushroom Manchurian gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Paneer Chilli Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Paneer Hot Basil Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Paneer Hot Garlic Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Paneer Manchurian Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Paneer Schezwan Gravy", "Subgroup": "Gravy", "Price": 315 },
+            { "Name": "Veg Manchurian Gravy", "Subgroup": "Gravy", "Price": 315 },
+                           
+            { "Name": "Triple Schezwan Fried Rice", "Subgroup": "Rice & Noodles With Gravy.", "Price": 309 },
+            { "Name": "Veg Chopper Rice With Gravy", "Subgroup": "Rice & Noodles With Gravy.", "Price": 329 },
+            { "Name": "Triple Schezwan Noodle With Gravy", "Subgroup": "Rice & Noodles With Gravy.", "Price": 329 },
+            { "Name": "Yancho With Gravy", "Subgroup": "Rice & Noodles With Gravy.", "Price": 329 },
+            {"Name": "Green Thai Curry With Rice", "Subgroup": "Rice & Noodles With Gravy.", "Price": 339 },
+            {"Name": "Red Thai Curry With Rice", "Subgroup": "Rice & Noodles With Gravy.", "Price": 339 },
+
+        ];
+        
+        // Group menu items by their subgroup
+        const groupedMenu = menuData.reduce((acc, item) => {
+            const subgroup = item.Subgroup.trim();
+            if (!acc[subgroup]) {
+                acc[subgroup] = [];
+            }
+            acc[subgroup].push(item);
+            return acc;
+        }, {});
+
+        const menuContentDiv = document.getElementById('menu-content');
+        const modal = document.getElementById('apiResponseModal');
+        const closeBtn = document.getElementsByClassName('close-button')[0];
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+
+        // Close the modal when the user clicks on 'x'
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        // Close the modal when the user clicks anywhere outside of it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Function to make a Gemini API call and handle the response
+        async function callGeminiAPI(prompt) {
+            modal.style.display = 'flex';
+            modalTitle.textContent = "Loading...";
+            modalBody.innerHTML = '<div class="loader"></div>';
+
+            try {
+                const chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                let response = null;
+                let retryCount = 0;
+                const maxRetries = 5;
+                const baseDelay = 1000;
+
+                // Implement exponential backoff for API calls
+                while (retryCount < maxRetries) {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        break;
+                    }
+
+                    if (response.status === 429) {
+                        const delay = baseDelay * Math.pow(2, retryCount);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        retryCount++;
+                    } else {
+                        throw new Error(`API call failed with status: ${response.status}`);
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error("API call failed after multiple retries.");
+                }
+
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) {
+                    throw new Error("No text found in API response.");
+                }
+                modalBody.textContent = text;
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                modalBody.textContent = 'Sorry, something went wrong. Please try again later.';
+            }
+        }
+
+        // Function to handle the "Get Description" button click
+        function getDescription(itemName) {
+            modalTitle.textContent = `Description for ${itemName}`;
+            const prompt = `Write a short, appetizing food description for "${itemName}". Use a friendly tone. Mention key flavors and textures. Do not include any formatting like bullet points or bold text.`;
+            callGeminiAPI(prompt);
+        }
+
+        // Function to handle the "Get Pairing" button click
+        function getPairing(itemName) {
+            modalTitle.textContent = `Pairing Suggestions for ${itemName}`;
+            const allItems = menuData.map(item => item.Name).join(", ");
+            const prompt = `Suggest a complementary food pairing from the D'GRUB menu for the dish "${itemName}". The menu items are: ${allItems}. Give a reason why it's a good pairing. Format the output with the suggestion first, then a short reason.`;
+            callGeminiAPI(prompt);
+        }
+
+        // Function to create a section for each menu category
+        function createMenuCategory(categoryName, items) {
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'menu-category';
+
+            const title = document.createElement('h2');
+            title.className = 'menu-category-title';
+            title.textContent = categoryName;
+            categoryDiv.appendChild(title);
+
+            // Grid layout for menu items within each category
+            // `grid-cols-1` is for mobile, `md:grid-cols-2` is for medium screens and up
+            const itemsGrid = document.createElement('div');
+            itemsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8';
+
+            items.forEach(item => {
+                const itemDiv = document.createElement('div');
+                // `flex-col` is for mobile, `md:flex-row` is for medium screens and up
+                itemDiv.className = 'flex flex-col md:flex-row justify-between items-start md:items-center p-5 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300';
+                
+                // Container for the item name and description button
+                const itemDetails = document.createElement('div');
+                itemDetails.className = 'flex flex-col items-start w-full md:w-auto mb-2 md:mb-0';
+
+                const itemName = document.createElement('p');
+                itemName.className = 'item-name text-lg mb-2'; // Added margin-bottom
+                itemName.textContent = item.Name;
+                itemDetails.appendChild(itemName);
+
+                // Create the box for the Description button
+                const descriptionBox = document.createElement('div');
+                // Removed w-full to make it smaller, and set margin-top
+                descriptionBox.className = 'bg-red-100 p-1 rounded-lg shadow-sm mt-2';
+                const descriptionButton = document.createElement('button');
+                descriptionButton.className = 'action-button description-button';
+                descriptionButton.textContent = 'Get Description';
+                descriptionButton.onclick = () => getDescription(item.Name);
+                descriptionBox.appendChild(descriptionButton);
+                itemDetails.appendChild(descriptionBox);
+
+                itemDiv.appendChild(itemDetails);
+
+                // Container for the pairing button and price
+                const rightSide = document.createElement('div');
+                // `flex-col` on mobile, `flex-row` on medium screens
+                rightSide.className = 'flex flex-col md:flex-row items-end md:items-center mt-2 md:mt-0 md:ml-auto space-y-2 md:space-y-0 md:space-x-4';
+
+                // Create the box for the Pairing button
+                const pairingBox = document.createElement('div');
+                pairingBox.className = 'bg-red-100 p-2 rounded-lg shadow-sm';
+                const pairingButton = document.createElement('button');
+                // `w-full` on mobile to make it fill the space
+                pairingButton.className = 'action-button pairing-button w-full';
+                pairingButton.textContent = 'Get Pairing';
+                pairingButton.onclick = () => getPairing(item.Name);
+                pairingBox.appendChild(pairingButton);
+                rightSide.appendChild(pairingBox);
+
+                const itemPrice = document.createElement('div');
+                itemPrice.className = 'item-price text-right text-lg mt-2 md:mt-0';
+
+                // Check for a price value
+                if (item.Price) {
+                    itemPrice.textContent = `₹${item.Price}`;
+                } else {
+                    itemPrice.textContent = `Price on request`;
+                    itemPrice.className = 'text-gray-500 italic';
+                }
+                rightSide.appendChild(itemPrice);
+                itemDiv.appendChild(rightSide);
+
+                itemsGrid.appendChild(itemDiv);
+            });
+
+            categoryDiv.appendChild(itemsGrid);
+            menuContentDiv.appendChild(categoryDiv);
+        }
+
+        // Render the menu by iterating through the grouped data
+        for (const category in groupedMenu) {
+            if (Object.hasOwnProperty.call(groupedMenu, category)) {
+                createMenuCategory(category, groupedMenu[category]);
+            }
+        }
+    </script>
+</body>
+</html>
